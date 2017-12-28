@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>今天天气不错</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            width: 800px;
+            height: 600px;
+            background-color: #CCCCCC;
+            position: relative;
+        }
+
+        #map div {
+            position: absolute;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+
+    <script>
+        //食物对象
+        (function () {
+            //设置一个用于创建食物的构造函数
+            //想要创建一个食物对象，需要哪些必须的值呢？
+            //bgColor 宽 高 坐标 放置位置
+            function Food(options) {
+                this.width = options.width || 20;
+                this.height = options.height || 20;
+                this.bgColor = options.bgColor || "green";
+
+                //下面设置的横纵坐标不是具体的left和top值，而是要在地图中的哪一个格中进行显示的坐标
+                this.x = 0;//设置横坐标
+                this.y = 0;//设置纵坐标
+
+                this.map = options.map;
+                this.element = null;
+            }
+
+            //根据数据画出某一个食物
+            //init - 初始化
+            Food.prototype.init = function () {
+
+                //删除旧食物的操作
+                if (this.element) {
+                    this.map.removeChild(this.element);
+                }
+
+                //创建一个食物盒子,将创建的食物盒子，保存到this的某个属性中
+                var div = document.createElement("div");
+                this.element = div;
+                div.style.width = this.width + "px";
+                div.style.height = this.height + "px";
+                div.style.position = "absolute";
+                div.style.backgroundColor = this.bgColor;
+                this.map.appendChild(div);
+
+                //初始化的基本操作完毕后，立刻设置随机位置
+                this.setRandomPos();
+            };
+
+            //设置一个方法用于设置随机的位置
+            Food.prototype.setRandomPos = function () {
+                //设置时要根据this.x设置left的具体值，所以需要先计算随机的x的值
+                //x的取值范围是多少？0-39 的所有整数   他们之间随机的一个
+                //Math.floor(Math.random() * (地图宽度/食物宽度));
+                this.x = Math.floor(Math.random() * this.map.offsetWidth / this.width);
+                this.y = Math.floor(Math.random() * this.map.offsetHeight / this.height);
+
+                //使用坐标*宽度或高度即可
+                this.element.style.left = this.x * this.width + "px";
+                this.element.style.top = this.y * this.height + "px";
+            };
+
+            //将设置的Food构造函数暴露给全局作用域
+            window.Food = Food;
+        })();
+
+        //蛇对象
+        (function () {
+            function Snake(options) {
+                this.width = options.width || 20;
+                this.height = options.height || 20;
+                this.map = options.map;
+                this.elements = [];
+                this.turn = "right";
+                this.body = [
+                    { x: 3, y: 1, color: "red" },
+                    { x: 2, y: 1, color: "orange" },
+                    { x: 1, y: 1, color: "orange" },
+                ]
+            }
+            Snake.prototype.init = function () {
+                for (var i = 0; i < this.elements.length; i++) {
+                    this.map.removeChild(this.elements[i])
+                }
+                this.elements = []
+                var div;
+                for (var i = 0; i < this.body.length; i++) {
+                    div = document.createElement("div");
+                    this.elements.push(div)
+                    div.style.width = this.width + "px";
+                    div.style.height = this.height + "px";
+                    div.style.backgroundColor = this.body[i].color;
+                    div.style.left = this.body[i].x * this.width + "px";
+                    div.style.top = this.body[i].y * this.height + "px";
+                    this.map.appendChild(div);
+                }
+            }
+            Snake.prototype.move = function () {
+                for (var i = this.body.length - 1; i >= 1; i--) {
+                    this.body[i].x = this.body[i - 1].x;
+                    this.body[i].y = this.body[i - 1].y;
+                }
+                switch (this.turn) {
+                    case "left":
+                        this.body[0].x--;
+                        break;
+                    case "up":
+                        this.body[0].y--
+                        break;
+                    case "right":
+                        this.body[0].x++;
+                        break;
+                    case "down":
+                        this.body[0].y++;
+                        break;
+                }
+
+            }
+
+            window.Snake = Snake;
+        })();
+
+        //game对象
+        (function () {
+            function Game(options) {
+                this.food = options.food;
+                this.snake = options.snake;
+                this.map = options.map;
+
+            }
+            Game.prototype.init = function () {
+                this.food.init();
+                this.snake.init();
+                this.snakeRun();
+                this.turn();
+            }
+            Game.prototype.snakeRun = function () {
+                var _this = this;
+                var timer = null;
+                timer = setInterval(function () {
+                    var lastX = _this.snake.body[_this.snake.body.length - 1].x;
+                    var lastY = _this.snake.body[_this.snake.body.length - 1].y
+                    _this.snake.move();
+                    if (_this.snake.body[0].x == _this.food.x && _this.snake.body[0].y == _this.food.y) {
+                        _this.snake.body.push({ x: lastX, y: lastY, color: "orange" });
+                        _this.food.init()
+                    }
+                    var maxX = _this.map.offsetWidth / _this.snake.width - 1;
+                    var maxY = _this.map.offsetHeight / _this.snake.height - 1;
+                    if (_this.snake.body[0].x < 0 || _this.snake.body[0].x > maxX || _this.snake.body[0].y < 0 || _this.snake.body[0].y > maxY) {
+                        clearInterval(timer);
+                        alert("撞到墙");
+                        return false;
+                    }
+                    for (var i = 4; i < _this.snake.body.length; i++) {
+                        if (_this.snake.body[0].x == _this.snake.body[i].x && _this.snake.body[0].y == _this.snake.body[i].y) {
+                            clearInterval(timer);
+                            alert("吃到自己");
+                            return false;
+                        }
+                    }
+                    _this.snake.init();
+                }, 100)
+            }
+            Game.prototype.turn = function () {
+                var _this = this;
+                window.onkeydown = function (e) {
+                    e = e || window.event;
+                    switch (true) {
+                        case e.keyCode == 37 && _this.snake.turn != "right":
+                            _this.snake.turn = "left";
+                            break;
+                        case e.keyCode == 38 && _this.snake.turn != "down":
+                            _this.snake.turn = "up";
+                            break;
+                        case e.keyCode == 39 && _this.snake.turn != "left":
+                            _this.snake.turn = "right";
+                            break;
+                        case e.keyCode == 40 && _this.snake.turn != "up":
+                            _this.snake.turn = "down";
+                            break;
+                    }
+                }
+            }
+            var g1 = new Game({
+                food: new Food({ map: document.getElementById("map") }),
+                snake: new Snake({ map: document.getElementById("map") }),
+                map: document.getElementById("map")
+            })
+            g1.init()
+        })();
+
+
+
+
+
+    </script>
+
+</body>
+
+</html>

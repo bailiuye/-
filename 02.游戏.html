@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>今天天气不错</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            width: 800px;
+            height: 600px;
+            background-color: #CCCCCC;
+            position: relative;
+        }
+
+        #map div {
+            position: absolute;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <script>
+        //食物
+        (function (w, d) {
+            function Food(option) {
+                this.width = option.width || 20;
+                this.height = option.height || 20;
+                this.bgcolor = option.bgcolor || "green";
+                this.map = option.map;
+                this.x = 0;
+                this.y = 0;
+                this.element = null;
+            }
+            Food.prototype.init = function () {
+                if (this.element) {
+                    this.map.removeChild(this.element)
+                }
+                var div = document.createElement("div");
+                this.element = div;
+                div.style.width = this.width + "px";
+                div.style.height = this.height + "px";
+                div.style.backgroundColor = this.bgcolor;
+                this.position()
+                this.map.appendChild(div);
+            }
+            Food.prototype.position = function () {
+                this.x = Math.floor(Math.random() * this.map.offsetWidth / this.width);
+                this.y = Math.floor(Math.random() * this.map.offsetHeight / this.height)
+                this.element.style.left = this.x * this.width + "px";
+                this.element.style.top = this.y * this.height + "px";
+            }
+            w.Food = Food;
+        })(window, document);
+
+        //蛇
+        (function (w, d) {
+            function Snake(option) {
+                this.width = option.width || 20;
+                this.height = option.height || 20;
+                this.map = option.map;
+                this.element = [];
+                this.turn = "right";
+                this.body = [
+                    { x: 4, y: 1, color: "red" },
+                    { x: 3, y: 1, color: "orange" },
+                    { x: 2, y: 1, color: "orange" },
+                    { x: 1, y: 1, color: "orange" }
+                ];
+            }
+            Snake.prototype.init = function () {
+                var div;
+                for (var i = 0; i < this.element.length; i++) {
+                    this.map.removeChild(this.element[i])
+                }
+                this.element = [];
+                for (var i = 0; i < this.body.length; i++) {
+                    div = document.createElement("div");
+                    div.style.width = this.width + "px";
+                    div.style.height = this.height + "px";
+                    div.style.left = this.body[i].x * this.width + "px";
+                    div.style.top = this.body[i].y * this.height + "px";
+                    div.style.backgroundColor = this.body[i].color;
+                    this.element.push(div)
+                    this.map.appendChild(div)
+                }
+            }
+            Snake.prototype.move = function () {
+                for (var i = this.body.length - 1; i >= 1; i--) {
+                    this.body[i].x = this.body[i - 1].x;
+                    this.body[i].y = this.body[i - 1].y;
+                }
+                switch (this.turn) {
+                    case "left":
+                        this.body[0].x--;
+                        break;
+                    case "right":
+                        this.body[0].x++;
+                        break;
+                    case "up":
+                        this.body[0].y--;
+                        break;
+                    case "down":
+                        this.body[0].y++;
+                        break;
+                }
+            }
+            w.Snake = Snake;
+        })(window, document);
+
+        //游戏控制器
+        (function (w, d) {
+            function Game(option) {
+                this.food = option.food;
+                this.snake = option.snake;
+                this.red = 0;
+                this.green = 0;
+                this.blue = 0;
+                this.isred = true;
+                this.isgreen = false;
+                this.isblue = false;
+            }
+            Game.prototype.init = function () {
+                this.food.init();
+                this.snake.init();
+                this.move2();
+                this.turn();
+            }
+            Game.prototype.move2 = function () {
+                var timer = null;
+                var _this = this;
+                timer = setInterval(function () {
+                    var body = _this.snake.body;
+                    var x = body[body.length - 1].x;
+                    var y = body[body.length - 1].y;
+                    var maxX = _this.food.map.offsetWidth / _this.food.width - 1;
+                    var maxY = _this.food.map.offsetHeight / _this.food.height - 1;
+                    _this.snake.move();
+                    if (body[0].x == _this.food.x && body[0].y == _this.food.y) {
+                        body.push({ x: x, y: y, color: "rgb(" + _this.red + "," + _this.green + "," + _this.blue + ")" });
+                        if(_this.red>=255){
+                            _this.isred = false;
+                            _this.isgreen = true;
+                            _this.red = 0;
+                        }else if(_this.green>=255){
+                            _this.isgreen = false;
+                            _this.isblue = true;
+                            _this.green = 0;
+                        }else if(_this.blue>=255){
+                            _this.isblue = false;
+                            _this.isred = true;
+                            _this.blue = 0;
+                        }
+                        switch (true) {
+                            case _this.isred:
+                                _this.red +=20;
+                                break;
+                            case _this.isgreen:
+                                _this.green += 20;
+                                break;
+                            case _this.isblue:
+                                _this.blue += 20;
+                                break;
+
+                        }
+
+                        _this.food.init();
+
+                    }
+                    if (body[0].x < 0 || body[0].x > maxX || body[0].y < 0 || body[0].y > maxY) {
+                        clearInterval(timer)
+                        alert("撞到墙");
+                        return false;
+                    }
+                    for (var i = 4; i < body.length; i++) {
+                        if (body[0].x == body[i].x && body[0].y == body[i].y) {
+                            clearInterval(timer)
+                            alert("咬到自己");
+                            return false;
+                        }
+                    }
+                    _this.snake.init();
+                }, 150)
+            }
+            Game.prototype.turn = function () {
+                var _this = this;
+                window.onkeydown = function (e) {
+                    e = e || window.event;
+                    switch (e.keyCode) {
+                        case 37: _this.snake.turn = "left";
+                            break;
+                        case 38: _this.snake.turn = "up";
+                            break;
+                        case 39: _this.snake.turn = "right";
+                            break;
+                        case 40: _this.snake.turn = "down";
+                            break;
+                    }
+                }
+            }
+
+
+            w.Game = Game;
+
+        })(window, document);
+
+
+
+        var map = document.getElementById("map")
+        var game = new Game({
+            food: new Food({ map: map,bgcolor:"yellowgreen" }),
+            snake: new Snake({ map: map })
+        })
+        game.init();
+
+
+    </script>
+</body>
